@@ -91,14 +91,25 @@
               <label>Link<input id="link" placeholder="https://..." /></label>
             </div>
 
-            <div id="pollBox" class="poll-box hidden">
-              <div class="section-title-row"><strong>Enquete do Story</strong><label class="switch"><input id="pollEnabled" type="checkbox"><span></span></label></div>
-              <input id="pollQuestion" placeholder="Qual você escolheria hoje?" />
-              <div class="two-col">
-                <input id="pollA" placeholder="Opção A" />
-                <input id="pollB" placeholder="Opção B" />
+            <div id="storyTools" class="story-tools hidden">
+              <div class="section-title-row">
+                <div>
+                  <strong>Stickers do Story</strong>
+                  <small>Adicione e arraste diretamente sobre a imagem, como no Instagram.</small>
+                </div>
               </div>
-              <small>A enquete é mostrada na prévia. A publicação automática de stickers depende do suporte atual da API da Meta.</small>
+              <div class="sticker-toolbar">
+                <button type="button" data-add-sticker="poll">📊 Enquete</button>
+                <button type="button" data-add-sticker="link">🔗 Link</button>
+                <button type="button" data-add-sticker="mention">@ Menção</button>
+                <button type="button" data-add-sticker="hashtag"># Hashtag</button>
+                <button type="button" data-add-sticker="location">📍 Localização</button>
+                <button type="button" data-add-sticker="text">Aa Texto</button>
+              </div>
+              <div id="stickerEditor" class="sticker-editor empty-sticker-editor">
+                Selecione um sticker na prévia para editar.
+              </div>
+              <small class="api-note">A prévia e a posição ficam salvas. Stickers interativos reais (enquete/link/menção) só são enviados automaticamente quando a API oficial da Meta oferecer suporte ao respectivo sticker.</small>
             </div>
 
             <div class="two-col">
@@ -121,10 +132,12 @@
             <div class="preview-label">PRÉVIA</div>
             <div id="phonePreview" class="phone-preview feed-preview">
               <div class="insta-head"><div class="avatar">JB</div><div><strong>juniorburgerofc</strong><small>Junior Burger</small></div><span>•••</span></div>
-              <div id="previewMedia" class="preview-media"><span>Sua mídia aparecerá aqui</span></div>
+              <div id="previewMedia" class="preview-media">
+                <span>Sua mídia aparecerá aqui</span>
+                <div id="storyStickerLayer" class="story-sticker-layer"></div>
+              </div>
               <div class="insta-actions">♡　💬　➤ <span>⌑</span></div>
               <div class="preview-copy"><strong>juniorburgerofc</strong> <span id="previewCaption">Sua legenda...</span><p id="previewHashtags">#juniorburgeroficial</p></div>
-              <div id="previewPoll" class="preview-poll hidden"><strong id="previewPollQuestion"></strong><button id="previewPollA"></button><button id="previewPollB"></button></div>
             </div>
           </div>
         </div>
