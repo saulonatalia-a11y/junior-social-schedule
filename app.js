@@ -29,7 +29,7 @@ function updatePreview(){
   renderStickers();
 }
 function stickerDefaults(type){
-  const base={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),type,x:50,y:55,scale:1};
+  const base={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),type,x:50,y:55,width:100,height:100};
   if(type==='poll')return{...base,question:'Qual você escolheria hoje?',a:'SIM 🔥',b:'COM CERTEZA 😍'};
   if(type==='link')return{...base,url:$('#link').value||'https://',label:'Saiba mais'};
   if(type==='mention')return{...base,text:'@juniorburgerofc'};
@@ -55,7 +55,7 @@ function renderStickers(){
   state.stickers.forEach(s=>{
     const el=document.createElement('div');
     el.className=`story-sticker sticker-${s.type}${s.id===state.selectedStickerId?' selected':''}`;
-    el.dataset.id=s.id;el.style.left=s.x+'%';el.style.top=s.y+'%';el.style.transform=`translate(-50%,-50%) scale(${s.scale||1})`;
+    el.dataset.id=s.id;el.style.left=s.x+'%';el.style.top=s.y+'%';el.style.transform='translate(-50%,-50%)';el.style.width=(s.width||100)+'%';el.style.height=(s.height||100)+'%';
     el.innerHTML=stickerInner(s);layer.append(el);
     el.addEventListener('pointerdown',startStickerDrag);
     el.addEventListener('click',e=>{e.stopPropagation();state.selectedStickerId=s.id;renderStickers();renderStickerEditor()});
@@ -80,12 +80,12 @@ function renderStickerEditor(){
   if(s.type==='poll')body+=field('Pergunta','stickerQuestion',s.question,'Sua pergunta')+`<div class="two-col">${field('Opção 1','stickerA',s.a,'SIM')}${field('Opção 2','stickerB',s.b,'NÃO')}</div>`;
   else if(s.type==='link')body+=field('URL','stickerUrl',s.url,'https://...')+field('Texto do botão','stickerLabel',s.label,'Saiba mais');
   else body+=field(s.type==='mention'?'@ Menção':s.type==='hashtag'?'# Hashtag':s.type==='location'?'Localização':'Texto','stickerText',s.text,'');
-  body+=`<label>Tamanho<input id="stickerScale" type="range" min="0.65" max="1.6" step="0.05" value="${s.scale||1}"></label><small>Arraste o sticker diretamente sobre a imagem para posicionar.</small>`;
+  body+=`<div class="two-col"><label>Largura <strong id="stickerWidthValue">${Math.round(s.width||100)}%</strong><input id="stickerWidth" type="range" min="45" max="180" step="1" value="${s.width||100}"></label><label>Altura <strong id="stickerHeightValue">${Math.round(s.height||100)}%</strong><input id="stickerHeight" type="range" min="45" max="180" step="1" value="${s.height||100}"></label></div><small>Agora largura e altura são independentes. Arraste o sticker diretamente sobre a imagem para posicionar.</small>`;
   box.innerHTML=body;
   $('#deleteSticker').onclick=()=>{state.stickers=state.stickers.filter(x=>x.id!==s.id);state.selectedStickerId=null;renderStickers();renderStickerEditor()};
   const bind=(id,key)=>{const el=$('#'+id);if(el)el.oninput=()=>{s[key]=el.value;renderStickers()}};
   bind('stickerQuestion','question');bind('stickerA','a');bind('stickerB','b');bind('stickerUrl','url');bind('stickerLabel','label');bind('stickerText','text');
-  const scale=$('#stickerScale');if(scale)scale.oninput=()=>{s.scale=Number(scale.value);renderStickers()};
+  const width=$('#stickerWidth'),height=$('#stickerHeight');if(width)width.oninput=()=>{s.width=Number(width.value);$('#stickerWidthValue').textContent=Math.round(s.width)+'%';renderStickers()};if(height)height.oninput=()=>{s.height=Number(height.value);$('#stickerHeightValue').textContent=Math.round(s.height)+'%';renderStickers()};
 }
 $$('[data-add-sticker]').forEach(b=>b.addEventListener('click',()=>addSticker(b.dataset.addSticker)));
 $('#storyStickerLayer').addEventListener('click',()=>{state.selectedStickerId=null;renderStickers();renderStickerEditor()});
