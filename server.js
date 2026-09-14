@@ -89,6 +89,8 @@ async function metaPost(pathname, params, token) {
   if (!r.ok || data.error) throw new Error(data.error?.message || 'Erro ao publicar no Instagram.');
   return data;
 }
+function needsManualInstagram(post){return post?.type==='story'&&Array.isArray(post.stickers)&&post.stickers.some(s=>s.type==='poll');}
+
 function scheduledTimeMs(post){
   if(!post?.date||!post?.time)return NaN;
   // O painel agenda em horário de Brasília (UTC-03:00).
@@ -177,7 +179,7 @@ async function api(req, res, u) {
   }
   if (req.method === 'POST' && /^\/api\/posts\/[^/]+\/publish$/.test(u.pathname)) {
     const id=decodeURIComponent(u.pathname.split('/')[3]); const db=readDb(); const p=db.posts.find(x=>x.id===id); if(!p)return json(res,404,{error:'Post não encontrado'});
-    try { const result=await publishPost(p); p.status='Publicado'; p.publishedAt=new Date().toISOString(); p.instagramMediaId=result.id||''; p.lastError=''; writeDb(db); return json(res,200,{ok:true,result}); }
+    try { if(needsManualInstagram(p)){p.status='Aguardando Instagram';p.lastError='Enquete interativa: abra o Instagram, adicione a enquete oficial e publique o Story manualmente.';writeDb(db);return json(res,200,{ok:true,manual:true});} const result=await publishPost(p); p.status='Publicado'; p.publishedAt=new Date().toISOString(); p.instagramMediaId=result.id||''; p.lastError=''; writeDb(db); return json(res,200,{ok:true,result}); }
     catch(e){console.error('PUBLISH_ERROR', {id:p.id,type:p.type,message:e.message});p.status='Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1;writeDb(db);return json(res,400,{error:e.message});}
   }
   return false;
@@ -202,7 +204,7 @@ setInterval(async()=>{
   for(const p of db.posts){
     if(p.status!=='Agendado'||!p.date||!p.time)continue;
     const due=scheduledTimeMs(p); if(!Number.isFinite(due)||due>now)continue;
-    try{ console.log('SCHEDULE_DUE',{id:p.id,type:p.type,date:p.date,time:p.time,due:new Date(due).toISOString()});const result=await publishPost(p); p.status='Publicado';p.publishedAt=new Date().toISOString();p.instagramMediaId=result.id||'';p.lastError='';console.log('SCHEDULE_PUBLISHED',{id:p.id,instagramMediaId:p.instagramMediaId}); }
+    try{ console.log('SCHEDULE_DUE',{id:p.id,type:p.type,date:p.date,time:p.time,due:new Date(due).toISOString()});if(needsManualInstagram(p)){p.status='Aguardando Instagram';p.manualReadyAt=new Date().toISOString();p.lastError='Enquete interativa: abra o Instagram, adicione a enquete oficial e publique o Story manualmente.';console.log('SCHEDULE_MANUAL_STORY',{id:p.id});}else{const result=await publishPost(p); p.status='Publicado';p.publishedAt=new Date().toISOString();p.instagramMediaId=result.id||'';p.lastError='';console.log('SCHEDULE_PUBLISHED',{id:p.id,instagramMediaId:p.instagramMediaId});} }
     catch(e){ console.error('SCHEDULE_PUBLISH_ERROR',{id:p.id,type:p.type,message:e.message});p.status=e.message.includes('ainda não está conectado')||e.message.includes('PUBLIC_BASE_URL')?'Agendado':'Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1; }
     changed=true;
   }
