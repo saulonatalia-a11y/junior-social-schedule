@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const state={type:'feed',media:[],posts:[],month:new Date(),api:true};
+const state={type:'feed',media:[],posts:[],month:new Date(),api:true,stickers:[],selectedStickerId:null};
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 async function api(url,opts={}){const r=await fetch(url,{headers:{'Content-Type':'application/json',...(opts.headers||{})},...opts});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||'Erro no servidor');return d}
 async function loadPosts(){try{state.posts=await api('/api/posts');state.api=true}catch{state.api=false;state.posts=JSON.parse(localStorage.getItem('jb_posts')||'[]')}renderAll()}
@@ -7,18 +7,94 @@ function saveLocal(){localStorage.setItem('jb_posts',JSON.stringify(state.posts)
 function showView(name){$$('.view').forEach(v=>v.classList.toggle('active',v.id===name+'View'));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));$('#pageTitle').textContent=({dashboard:'Dashboard',calendar:'Calendário',create:'Criar publicação',library:'Biblioteca'})[name]||'';}
 $$('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 $('#newPostBtn').onclick=()=>showView('create');
-$$('#typeTabs button').forEach(b=>b.onclick=()=>{state.type=b.dataset.type;$$('#typeTabs button').forEach(x=>x.classList.toggle('active',x===b));$('#pollBox').classList.toggle('hidden',state.type!=='story');updatePreview()});
-['caption','hashtags','pollQuestion','pollA','pollB'].forEach(id=>$('#'+id).addEventListener('input',updatePreview));
-$('#pollEnabled').addEventListener('change',updatePreview);
+$('#typeTabs button').forEach(b=>b.onclick=()=>{state.type=b.dataset.type;$('#typeTabs button').forEach(x=>x.classList.toggle('active',x===b));$('#storyTools').classList.toggle('hidden',state.type!=='story');updatePreview()});
+['caption','hashtags'].forEach(id=>$('#'+id).addEventListener('input',updatePreview));
 $('#mediaInput').addEventListener('change',e=>{[...e.target.files].forEach(file=>{const url=URL.createObjectURL(file);state.media.push({url,type:file.type,name:file.name,file});});renderMedia();updatePreview();renderLibrary()});
 function renderMedia(){const s=$('#mediaStrip');s.innerHTML='';state.media.forEach((m,i)=>{const wrap=document.createElement('div');wrap.className='media-thumb-wrap';const el=document.createElement(m.type.startsWith('video')?'video':'img');el.src=m.url;el.className='media-thumb';if(el.tagName==='VIDEO')el.muted=true;const x=document.createElement('button');x.className='remove-media';x.textContent='×';x.onclick=()=>{state.media.splice(i,1);renderMedia();updatePreview();renderLibrary()};wrap.append(el,x);s.append(wrap)})}
-function updatePreview(){const media=$('#previewMedia');media.innerHTML='';if(state.media[0]){const m=state.media[0],el=document.createElement(m.type.startsWith('video')?'video':'img');el.src=m.url;if(el.tagName==='VIDEO'){el.controls=true;el.muted=true}media.append(el)}else media.innerHTML='<span>Sua mídia aparecerá aqui</span>';$('#previewCaption').textContent=$('#caption').value||'Sua legenda...';$('#previewHashtags').textContent=$('#hashtags').value||'';const isStory=state.type==='story';$('#phonePreview').classList.toggle('story-preview',isStory);const poll=isStory&&$('#pollEnabled').checked;$('#previewPoll').classList.toggle('hidden',!poll);$('#previewPollQuestion').textContent=$('#pollQuestion').value||'Qual você escolheria hoje?';$('#previewPollA').textContent=$('#pollA').value||'Opção A';$('#previewPollB').textContent=$('#pollB').value||'Opção B';}
+function updatePreview(){
+  const media=$('#previewMedia'),layer=$('#storyStickerLayer');
+  [...media.children].forEach(el=>{if(el!==layer)el.remove()});
+  if(state.media[0]){
+    const m=state.media[0],el=document.createElement(m.type.startsWith('video')?'video':'img');
+    el.src=m.url;if(el.tagName==='VIDEO'){el.controls=true;el.muted=true}media.insertBefore(el,layer);
+  }else{
+    const empty=document.createElement('span');empty.textContent='Sua mídia aparecerá aqui';media.insertBefore(empty,layer);
+  }
+  $('#previewCaption').textContent=$('#caption').value||'Sua legenda...';
+  $('#previewHashtags').textContent=$('#hashtags').value||'';
+  const isStory=state.type==='story';
+  $('#phonePreview').classList.toggle('story-preview',isStory);
+  $('#storyTools').classList.toggle('hidden',!isStory);
+  layer.classList.toggle('hidden',!isStory);
+  renderStickers();
+}
+function stickerDefaults(type){
+  const base={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),type,x:50,y:55,scale:1};
+  if(type==='poll')return{...base,question:'Qual você escolheria hoje?',a:'SIM 🔥',b:'COM CERTEZA 😍'};
+  if(type==='link')return{...base,url:$('#link').value||'https://',label:'Saiba mais'};
+  if(type==='mention')return{...base,text:'@juniorburgerofc'};
+  if(type==='hashtag')return{...base,text:'#juniorburgeroficial'};
+  if(type==='location')return{...base,text:$('#location').value||'Junior Burger'};
+  return{...base,text:'Digite seu texto'};
+}
+function addSticker(type){
+  const s=stickerDefaults(type);state.stickers.push(s);state.selectedStickerId=s.id;renderStickers();renderStickerEditor();
+}
+function selectedSticker(){return state.stickers.find(s=>s.id===state.selectedStickerId)||null}
+function stickerInner(s){
+  if(s.type==='poll')return `<div class="sticker-poll-q">${escapeHtml(s.question||'Enquete')}</div><div class="sticker-poll-options"><span>${escapeHtml(s.a||'SIM')}</span><span>${escapeHtml(s.b||'NÃO')}</span></div>`;
+  if(s.type==='link')return `<span class="sticker-icon">🔗</span><span>${escapeHtml(s.label||'Link')}</span>`;
+  if(s.type==='mention')return escapeHtml(s.text||'@perfil');
+  if(s.type==='hashtag')return escapeHtml(s.text||'#hashtag');
+  if(s.type==='location')return `<span class="sticker-icon">📍</span><span>${escapeHtml(s.text||'Localização')}</span>`;
+  return escapeHtml(s.text||'Texto');
+}
+function renderStickers(){
+  const layer=$('#storyStickerLayer');if(!layer)return;layer.innerHTML='';
+  if(state.type!=='story')return;
+  state.stickers.forEach(s=>{
+    const el=document.createElement('div');
+    el.className=`story-sticker sticker-${s.type}${s.id===state.selectedStickerId?' selected':''}`;
+    el.dataset.id=s.id;el.style.left=s.x+'%';el.style.top=s.y+'%';el.style.transform=`translate(-50%,-50%) scale(${s.scale||1})`;
+    el.innerHTML=stickerInner(s);layer.append(el);
+    el.addEventListener('pointerdown',startStickerDrag);
+    el.addEventListener('click',e=>{e.stopPropagation();state.selectedStickerId=s.id;renderStickers();renderStickerEditor()});
+  });
+}
+function startStickerDrag(e){
+  e.preventDefault();e.stopPropagation();
+  const id=e.currentTarget.dataset.id;state.selectedStickerId=id;const s=selectedSticker();if(!s)return;
+  const layer=$('#storyStickerLayer'),rect=layer.getBoundingClientRect();
+  const move=ev=>{s.x=Math.max(4,Math.min(96,((ev.clientX-rect.left)/rect.width)*100));s.y=Math.max(4,Math.min(96,((ev.clientY-rect.top)/rect.height)*100));renderStickers()};
+  const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);renderStickerEditor()};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+}
+function field(label,id,value,placeholder=''){
+  return `<label>${label}<input id="${id}" value="${escapeHtml(value||'')}" placeholder="${escapeHtml(placeholder)}"></label>`;
+}
+function renderStickerEditor(){
+  const box=$('#stickerEditor');if(!box)return;const s=selectedSticker();
+  if(!s){box.className='sticker-editor empty-sticker-editor';box.innerHTML='Selecione um sticker na prévia para editar.';return}
+  box.className='sticker-editor';
+  let body=`<div class="sticker-editor-head"><strong>${({poll:'Enquete',link:'Link',mention:'Menção',hashtag:'Hashtag',location:'Localização',text:'Texto'})[s.type]}</strong><button type="button" id="deleteSticker">Excluir</button></div>`;
+  if(s.type==='poll')body+=field('Pergunta','stickerQuestion',s.question,'Sua pergunta')+`<div class="two-col">${field('Opção 1','stickerA',s.a,'SIM')}${field('Opção 2','stickerB',s.b,'NÃO')}</div>`;
+  else if(s.type==='link')body+=field('URL','stickerUrl',s.url,'https://...')+field('Texto do botão','stickerLabel',s.label,'Saiba mais');
+  else body+=field(s.type==='mention'?'@ Menção':s.type==='hashtag'?'# Hashtag':s.type==='location'?'Localização':'Texto','stickerText',s.text,'');
+  body+=`<label>Tamanho<input id="stickerScale" type="range" min="0.65" max="1.6" step="0.05" value="${s.scale||1}"></label><small>Arraste o sticker diretamente sobre a imagem para posicionar.</small>`;
+  box.innerHTML=body;
+  $('#deleteSticker').onclick=()=>{state.stickers=state.stickers.filter(x=>x.id!==s.id);state.selectedStickerId=null;renderStickers();renderStickerEditor()};
+  const bind=(id,key)=>{const el=$('#'+id);if(el)el.oninput=()=>{s[key]=el.value;renderStickers()}};
+  bind('stickerQuestion','question');bind('stickerA','a');bind('stickerB','b');bind('stickerUrl','url');bind('stickerLabel','label');bind('stickerText','text');
+  const scale=$('#stickerScale');if(scale)scale.oninput=()=>{s.scale=Number(scale.value);renderStickers()};
+}
+$$('[data-add-sticker]').forEach(b=>b.addEventListener('click',()=>addSticker(b.dataset.addSticker)));
+$('#storyStickerLayer').addEventListener('click',()=>{state.selectedStickerId=null;renderStickers();renderStickerEditor()});
 function readFileDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
 async function uploadMedia(){if(!state.api)return state.media.map(m=>({name:m.name,type:m.type}));const out=[];for(const m of state.media){if(m.serverUrl){out.push(m);continue}const dataUrl=await readFileDataURL(m.file);out.push(await api('/api/media',{method:'POST',body:JSON.stringify({name:m.name,type:m.type,dataUrl})}))}return out}
-async function buildPost(){const date=$('#postDate').value,time=$('#postTime').value,status=$('#postStatus').value;if(!date){toast('Escolha uma data.');return null}if(!state.media.length&&status==='Agendado'){toast('Adicione uma foto ou vídeo.');return null}const media=await uploadMedia();return{type:state.type,caption:$('#caption').value,hashtags:$('#hashtags').value,location:$('#location').value,link:$('#link').value,date,time,status,pollEnabled:$('#pollEnabled').checked,pollQuestion:$('#pollQuestion').value,pollA:$('#pollA').value,pollB:$('#pollB').value,media}}
+async function buildPost(){const date=$('#postDate').value,time=$('#postTime').value,status=$('#postStatus').value;if(!date){toast('Escolha uma data.');return null}if(!state.media.length&&status==='Agendado'){toast('Adicione uma foto ou vídeo.');return null}const media=await uploadMedia();return{type:state.type,caption:$('#caption').value,hashtags:$('#hashtags').value,location:$('#location').value,link:$('#link').value,date,time,status,stickers:state.type==='story'?state.stickers:[],media}}
 async function createPost(){try{const p=await buildPost();if(!p)return;if(state.api){const saved=await api('/api/posts',{method:'POST',body:JSON.stringify(p)});state.posts.unshift(saved)}else{p.id=Date.now();state.posts.unshift(p);saveLocal()}renderAll();toast('Publicação salva.');showView('calendar')}catch(e){toast(e.message)}}
 $('#savePost').onclick=createPost;
-$('#clearForm').onclick=()=>{state.media=[];renderMedia();['caption','location','link','pollQuestion','pollA','pollB'].forEach(id=>$('#'+id).value='');$('#hashtags').value='#juniorburgeroficial';$('#pollEnabled').checked=false;updatePreview()};
+$('#clearForm').onclick=()=>{state.media=[];state.stickers=[];state.selectedStickerId=null;renderMedia();['caption','location','link'].forEach(id=>$('#'+id).value='');$('#hashtags').value='#juniorburgeroficial';renderStickerEditor();updatePreview()};
 function labelType(t){return({feed:'Feed',carousel:'Carrossel',story:'Story',reel:'Reel'})[t]||t}
 function fmtDate(d){if(!d)return'';const [y,m,day]=d.split('-');return `${day}/${m}/${y}`}
 function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
@@ -32,5 +108,5 @@ function renderLibrary(){const g=$('#libraryGrid');g.innerHTML='';const all=stat
 async function refreshMetaStatus(){if(!state.api){$('#instagramStatus').textContent='Servidor offline';return}try{const s=await api('/api/meta/status');$('#instagramStatus').textContent=s.connected?`Conectado${s.username?' @'+s.username:''}`:(s.configured?'Pronto para conectar':'Falta configurar Meta');$('#instagramButton').textContent=s.connected?'Reconectar Instagram':'Conectar Instagram'}catch(e){$('#instagramStatus').textContent=e.message}}
 $('#instagramButton').onclick=async()=>{if(!state.api)return toast('Abra pelo servidor.');try{const d=await api('/api/meta/connect');location.href=d.url}catch(e){toast(e.message)}};
 function setToday(){const d=new Date(),iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;$('#postDate').value=iso}
-function renderAll(){renderDashboard();renderCalendar();renderLibrary();updatePreview()}
+function renderAll(){renderDashboard();renderCalendar();renderLibrary();updatePreview();renderStickerEditor()}
 setToday();loadPosts();refreshMetaStatus();if(new URLSearchParams(location.search).get('instagram')==='connected'){toast('Instagram conectado com sucesso.');history.replaceState({},'',location.pathname)}
