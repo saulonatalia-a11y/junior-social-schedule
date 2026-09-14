@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Junior Social Scheduler</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">JB</div>
+        <div>
+          <strong>Junior Social</strong>
+          <span>Scheduler</span>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="calendar">Calendário</button>
+        <button class="nav-btn" data-view="create">Criar publicação</button>
+        <button class="nav-btn" data-view="library">Biblioteca</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="instagramButton" class="instagram-btn">Conectar Instagram</button>
+        <div id="instagramStatus" class="connection-status">Não conectado</div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CENTRAL DE CONTEÚDO</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <button id="newPostBtn" class="primary">+ Nova publicação</button>
+      </header>
+
+      <section id="dashboardView" class="view active">
+        <div class="cards-grid stats-grid">
+          <article class="stat-card"><span>Agendados</span><strong id="statScheduled">0</strong></article>
+          <article class="stat-card"><span>Rascunhos</span><strong id="statDrafts">0</strong></article>
+          <article class="stat-card"><span>Publicados</span><strong id="statPublished">0</strong></article>
+          <article class="stat-card"><span>Com erro</span><strong id="statErrors">0</strong></article>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">PRÓXIMOS</p><h2>Agendamentos</h2></div>
+          </div>
+          <div id="upcomingList" class="post-list empty-state">Nenhuma publicação agendada.</div>
+        </div>
+      </section>
+
+      <section id="calendarView" class="view">
+        <div class="panel">
+          <div class="panel-head calendar-controls">
+            <button id="prevMonth" class="ghost">←</button>
+            <h2 id="calendarTitle"></h2>
+            <button id="nextMonth" class="ghost">→</button>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </div>
+      </section>
+
+      <section id="createView" class="view">
+        <div class="composer-grid">
+          <div class="panel composer-panel">
+            <div class="type-tabs" id="typeTabs">
+              <button data-type="feed" class="active">Feed</button>
+              <button data-type="carousel">Carrossel</button>
+              <button data-type="story">Story</button>
+              <button data-type="reel">Reel</button>
+            </div>
+
+            <label class="upload-box">
+              <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden />
+              <strong>+ Adicionar foto ou vídeo</strong>
+              <span>Imagens e vídeos do seu computador</span>
+            </label>
+            <div id="mediaStrip" class="media-strip"></div>
+
+            <label>Legenda
+              <textarea id="caption" rows="5" placeholder="Escreva sua legenda..."></textarea>
+            </label>
+            <label>Hashtags
+              <input id="hashtags" value="#juniorburgeroficial" placeholder="#juniorburgeroficial #burger" />
+            </label>
+            <div class="two-col">
+              <label>Localização<input id="location" placeholder="Junior Burger" /></label>
+              <label>Link<input id="link" placeholder="https://..." /></label>
+            </div>
+
+            <div id="pollBox" class="poll-box hidden">
+              <div class="section-title-row"><strong>Enquete do Story</strong><label class="switch"><input id="pollEnabled" type="checkbox"><span></span></label></div>
+              <input id="pollQuestion" placeholder="Qual você escolheria hoje?" />
+              <div class="two-col">
+                <input id="pollA" placeholder="Opção A" />
+                <input id="pollB" placeholder="Opção B" />
+              </div>
+              <small>A enquete é mostrada na prévia. A publicação automática de stickers depende do suporte atual da API da Meta.</small>
+            </div>
+
+            <div class="two-col">
+              <label>Data<input id="postDate" type="date" /></label>
+              <label>Horário<input id="postTime" type="time" /></label>
+            </div>
+            <label>Status
+              <select id="postStatus">
+                <option>Agendado</option>
+                <option>Rascunho</option>
+              </select>
+            </label>
+            <div class="actions-row">
+              <button id="savePost" class="primary">Salvar publicação</button>
+              <button id="clearForm" class="ghost">Limpar</button>
+            </div>
+          </div>
+
+          <div class="preview-wrap">
+            <div class="preview-label">PRÉVIA</div>
+            <div id="phonePreview" class="phone-preview feed-preview">
+              <div class="insta-head"><div class="avatar">JB</div><div><strong>juniorburgerofc</strong><small>Junior Burger</small></div><span>•••</span></div>
+              <div id="previewMedia" class="preview-media"><span>Sua mídia aparecerá aqui</span></div>
+              <div class="insta-actions">♡　💬　➤ <span>⌑</span></div>
+              <div class="preview-copy"><strong>juniorburgerofc</strong> <span id="previewCaption">Sua legenda...</span><p id="previewHashtags">#juniorburgeroficial</p></div>
+              <div id="previewPoll" class="preview-poll hidden"><strong id="previewPollQuestion"></strong><button id="previewPollA"></button><button id="previewPollB"></button></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="libraryView" class="view">
+        <div class="panel"><div class="panel-head"><div><p class="eyebrow">CONTEÚDO</p><h2>Biblioteca de mídias</h2></div></div><div id="libraryGrid" class="library-grid empty-state">As mídias dos seus posts aparecerão aqui.</div></div>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
