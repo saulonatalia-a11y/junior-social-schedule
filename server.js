@@ -142,7 +142,7 @@ async function api(req, res, u) {
     return json(res,201,{serverUrl:`/uploads/${filename}`,name:b.name||filename,type:b.type||'application/octet-stream'});
   }
   if (req.method === 'GET' && u.pathname === '/api/meta/status') {
-    const m=readDb().meta||{}; return json(res,200,{connected:!!m.connected,username:m.username||'',userId:m.userId||'',configured:!!(process.env.META_CLIENT_ID&&process.env.META_CLIENT_SECRET)});
+    const m=readDb().meta||{}; return json(res,200,{connected:!!m.connected,username:m.username||'',userId:m.userId||'',profilePictureUrl:m.profilePictureUrl||'',configured:!!(process.env.META_CLIENT_ID&&process.env.META_CLIENT_SECRET)});
   }
   if (req.method === 'GET' && u.pathname === '/api/meta/connect') {
     try {
@@ -160,9 +160,9 @@ async function api(req, res, u) {
     try {
       const code=u.searchParams.get('code');
       if (!code) throw new Error('Retorno OAuth inválido: código ausente.');
-      const token=await exchangeCode(code); const accessToken=token.access_token; let profile={id:token.user_id||'',username:''};
-      try { profile=await metaGet('/me?fields=id,username',accessToken); } catch {}
-      const db=readDb(); db.meta={connected:true,accessToken,userId:String(profile.id||token.user_id||''),username:profile.username||'',connectedAt:new Date().toISOString()}; writeDb(db);
+      const token=await exchangeCode(code); const accessToken=token.access_token; let profile={id:token.user_id||'',username:'',profile_picture_url:''};
+      try { profile=await metaGet('/me?fields=id,username,profile_picture_url',accessToken); } catch {}
+      const db=readDb(); db.meta={connected:true,accessToken,userId:String(profile.id||token.user_id||''),username:profile.username||'',profilePictureUrl:profile.profile_picture_url||'',connectedAt:new Date().toISOString()}; writeDb(db);
       res.writeHead(302,{Location:'/index.html?instagram=connected'}); return res.end();
     } catch(e) { return text(res,400,`Falha ao conectar Instagram: ${e.message}`); }
   }
