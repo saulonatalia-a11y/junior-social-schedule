@@ -1,0 +1,12 @@
+{
+  "name": "junior-social-scheduler",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Agendador de Feed, Stories e Reels com integração Meta/Instagram.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
