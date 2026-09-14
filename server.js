@@ -62,8 +62,13 @@ function requireMetaConfig() {
 }
 async function exchangeCode(code) {
   const c = requireMetaConfig();
-  const form = new URLSearchParams({ client_id:c.clientId, client_secret:c.clientSecret, grant_type:'authorization_code', redirect_uri:c.redirectUri, code });
-  const r = await fetch(c.tokenUrl, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:form });
+  const form = new FormData();
+  form.set('client_id', c.clientId);
+  form.set('client_secret', c.clientSecret);
+  form.set('grant_type', 'authorization_code');
+  form.set('redirect_uri', c.redirectUri);
+  form.set('code', code);
+  const r = await fetch(c.tokenUrl, { method:'POST', body:form });
   const data = await r.json();
   if (!r.ok || data.error) throw new Error(data.error_message || data.error?.message || 'Falha ao trocar código OAuth.');
   return data;
@@ -142,7 +147,7 @@ async function api(req, res, u) {
   if (req.method === 'GET' && u.pathname === '/api/meta/connect') {
     try {
       const c=requireMetaConfig(); const state=crypto.randomBytes(24).toString('hex'); oauthStates.set(state,{createdAt:Date.now(),redirectUri:c.redirectUri});
-      const auth=new URL(c.authUrl); auth.searchParams.set('client_id',c.clientId); auth.searchParams.set('redirect_uri',c.redirectUri); auth.searchParams.set('response_type','code'); auth.searchParams.set('scope',c.scopes); auth.searchParams.set('state',state); auth.searchParams.set('enable_fb_login','0'); auth.searchParams.set('force_authentication','1');
+      const auth=new URL(c.authUrl); auth.searchParams.set('client_id',c.clientId); auth.searchParams.set('redirect_uri',c.redirectUri); auth.searchParams.set('response_type','code'); auth.searchParams.set('scope',c.scopes); auth.searchParams.set('state',state); auth.searchParams.set('force_reauth','true');
       return json(res,200,{url:auth.href});
     } catch(e) { return json(res,400,{error:e.message}); }
   }
