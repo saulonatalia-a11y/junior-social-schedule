@@ -89,6 +89,12 @@ async function metaPost(pathname, params, token) {
   if (!r.ok || data.error) throw new Error(data.error?.message || 'Erro ao publicar no Instagram.');
   return data;
 }
+function scheduledTimeMs(post){
+  if(!post?.date||!post?.time)return NaN;
+  // O painel agenda em horário de Brasília (UTC-03:00).
+  return new Date(`${post.date}T${post.time}:00-03:00`).getTime();
+}
+
 async function publishPost(post) {
   const db = readDb();
   const meta = db.meta || {};
@@ -122,7 +128,7 @@ async function publishPost(post) {
 }
 
 async function api(req, res, u) {
-  if (req.method === 'GET' && u.pathname === '/api/health') return json(res,200,{ok:true,version:'2.0.0'});
+  if (req.method === 'GET' && u.pathname === '/api/health') return json(res,200,{ok:true,version:'2.0.1',timezone:'America/Sao_Paulo',now:new Date().toISOString()});
   if (req.method === 'GET' && u.pathname === '/api/posts') return json(res,200,readDb().posts || []);
   if (req.method === 'POST' && u.pathname === '/api/posts') {
     const p = await parseBody(req); const db = readDb();
@@ -195,10 +201,10 @@ setInterval(async()=>{
   const db=readDb(); const now=Date.now(); let changed=false;
   for(const p of db.posts){
     if(p.status!=='Agendado'||!p.date||!p.time)continue;
-    const due=new Date(`${p.date}T${p.time}:00`).getTime(); if(!Number.isFinite(due)||due>now)continue;
-    try{ const result=await publishPost(p); p.status='Publicado';p.publishedAt=new Date().toISOString();p.instagramMediaId=result.id||'';p.lastError=''; }
+    const due=scheduledTimeMs(p); if(!Number.isFinite(due)||due>now)continue;
+    try{ console.log('SCHEDULE_DUE',{id:p.id,type:p.type,date:p.date,time:p.time,due:new Date(due).toISOString()});const result=await publishPost(p); p.status='Publicado';p.publishedAt=new Date().toISOString();p.instagramMediaId=result.id||'';p.lastError='';console.log('SCHEDULE_PUBLISHED',{id:p.id,instagramMediaId:p.instagramMediaId}); }
     catch(e){ console.error('SCHEDULE_PUBLISH_ERROR',{id:p.id,type:p.type,message:e.message});p.status=e.message.includes('ainda não está conectado')||e.message.includes('PUBLIC_BASE_URL')?'Agendado':'Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1; }
     changed=true;
   }
   if(changed)writeDb(db);
-},30000).unref();
+},10000).unref();
