@@ -48,7 +48,7 @@ function metaConfig() {
   return {
     clientId: process.env.META_CLIENT_ID || '',
     clientSecret: process.env.META_CLIENT_SECRET || '',
-    redirectUri: process.env.META_REDIRECT_URI || `${PUBLIC_BASE_URL}/api/meta/callback`,
+    redirectUri: 'https://junior-social-schedule.onrender.com/api/meta/callback',
     authUrl: process.env.META_AUTH_URL || 'https://www.instagram.com/oauth/authorize',
     tokenUrl: process.env.META_TOKEN_URL || 'https://api.instagram.com/oauth/access_token',
     graphUrl: process.env.META_GRAPH_URL || 'https://graph.instagram.com',
