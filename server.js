@@ -172,7 +172,7 @@ async function api(req, res, u) {
   if (req.method === 'POST' && /^\/api\/posts\/[^/]+\/publish$/.test(u.pathname)) {
     const id=decodeURIComponent(u.pathname.split('/')[3]); const db=readDb(); const p=db.posts.find(x=>x.id===id); if(!p)return json(res,404,{error:'Post não encontrado'});
     try { const result=await publishPost(p); p.status='Publicado'; p.publishedAt=new Date().toISOString(); p.instagramMediaId=result.id||''; p.lastError=''; writeDb(db); return json(res,200,{ok:true,result}); }
-    catch(e){p.status='Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1;writeDb(db);return json(res,400,{error:e.message});}
+    catch(e){console.error('PUBLISH_ERROR', {id:p.id,type:p.type,message:e.message});p.status='Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1;writeDb(db);return json(res,400,{error:e.message});}
   }
   return false;
 }
@@ -197,7 +197,7 @@ setInterval(async()=>{
     if(p.status!=='Agendado'||!p.date||!p.time)continue;
     const due=new Date(`${p.date}T${p.time}:00`).getTime(); if(!Number.isFinite(due)||due>now)continue;
     try{ const result=await publishPost(p); p.status='Publicado';p.publishedAt=new Date().toISOString();p.instagramMediaId=result.id||'';p.lastError=''; }
-    catch(e){ p.status=e.message.includes('ainda não está conectado')||e.message.includes('PUBLIC_BASE_URL')?'Agendado':'Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1; }
+    catch(e){ console.error('SCHEDULE_PUBLISH_ERROR',{id:p.id,type:p.type,message:e.message});p.status=e.message.includes('ainda não está conectado')||e.message.includes('PUBLIC_BASE_URL')?'Agendado':'Erro';p.lastError=e.message;p.publishAttempts=(p.publishAttempts||0)+1; }
     changed=true;
   }
   if(changed)writeDb(db);
