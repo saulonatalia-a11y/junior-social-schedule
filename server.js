@@ -52,7 +52,7 @@ function metaConfig() {
     authUrl: process.env.META_AUTH_URL || 'https://www.instagram.com/oauth/authorize',
     tokenUrl: process.env.META_TOKEN_URL || 'https://api.instagram.com/oauth/access_token',
     graphUrl: process.env.META_GRAPH_URL || 'https://graph.instagram.com',
-    scopes: process.env.META_SCOPES || 'instagram_business_basic,instagram_business_content_publish'
+    scopes: 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish,instagram_business_manage_insights'
   };
 }
 function requireMetaConfig() {
@@ -146,15 +146,20 @@ async function api(req, res, u) {
   }
   if (req.method === 'GET' && u.pathname === '/api/meta/connect') {
     try {
-      const c=requireMetaConfig(); const state=crypto.randomBytes(24).toString('hex'); oauthStates.set(state,{createdAt:Date.now(),redirectUri:c.redirectUri});
-      const auth=new URL(c.authUrl); auth.searchParams.set('client_id',c.clientId); auth.searchParams.set('redirect_uri',c.redirectUri); auth.searchParams.set('response_type','code'); auth.searchParams.set('scope',c.scopes); auth.searchParams.set('state',state); auth.searchParams.set('force_reauth','true');
+      const c=requireMetaConfig();
+      const auth = new URL('https://www.instagram.com/oauth/authorize');
+      auth.searchParams.set('force_reauth','true');
+      auth.searchParams.set('client_id',c.clientId);
+      auth.searchParams.set('redirect_uri',c.redirectUri);
+      auth.searchParams.set('response_type','code');
+      auth.searchParams.set('scope',c.scopes);
       return json(res,200,{url:auth.href});
     } catch(e) { return json(res,400,{error:e.message}); }
   }
   if (req.method === 'GET' && u.pathname === '/api/meta/callback') {
     try {
-      const state=u.searchParams.get('state'); const code=u.searchParams.get('code');
-      if (!state || !oauthStates.has(state) || !code) throw new Error('Retorno OAuth inválido.'); oauthStates.delete(state);
+      const code=u.searchParams.get('code');
+      if (!code) throw new Error('Retorno OAuth inválido: código ausente.');
       const token=await exchangeCode(code); const accessToken=token.access_token; let profile={id:token.user_id||'',username:''};
       try { profile=await metaGet('/me?fields=id,username',accessToken); } catch {}
       const db=readDb(); db.meta={connected:true,accessToken,userId:String(profile.id||token.user_id||''),username:profile.username||'',connectedAt:new Date().toISOString()}; writeDb(db);
